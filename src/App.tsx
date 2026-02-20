@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import "./App.css";
 
+type PuppyStatus = "Available" | "Hold" | "Sold";
+
 type Puppy = {
  id: string;
  name: string;
@@ -8,9 +10,19 @@ type Puppy = {
  color: string;
  sex: "Male" | "Female";
  price: number;
- status: "Available" | "Hold" | "Sold";
+ status: PuppyStatus;
  breederSlug: string;
  breederName: string;
+};
+
+type BreederApplication = {
+ id: string;
+ businessName: string;
+ contactName: string;
+ email: string;
+ state: string;
+ status: "Pending" | "Approved" | "Declined";
+ submittedAt: string; // simple string for now
 };
 
 const MOCK_PUPPIES: Puppy[] = [
@@ -27,36 +39,46 @@ const MOCK_PUPPIES: Puppy[] = [
  },
  {
    id: "p2",
-   name: "Nova",
+   name: "Nico",
    breed: "Yorkshire Terrier",
    color: "Chocolate",
-   sex: "Female",
+   sex: "Male",
    price: 2800,
-   status: "Available",
-   breederSlug: "exoticpups",
-   breederName: "ExoticPups",
+   status: "Hold",
+   breederSlug: "jeanies-minis",
+   breederName: "Jeanie’s Minis",
  },
  {
    id: "p3",
-   name: "Onyx",
-   breed: "Yorkshire Terrier",
-   color: "Black/Gold",
-   sex: "Male",
-   price: 2400,
-   status: "Hold",
-   breederSlug: "exoticpups",
-   breederName: "ExoticPups",
- },
- {
-   id: "p4",
    name: "Luna",
    breed: "Yorkshire Terrier",
-   color: "Parti",
+   color: "Blue & Tan",
    sex: "Female",
-   price: 3000,
+   price: 3500,
    status: "Sold",
-   breederSlug: "exoticpups",
-   breederName: "ExoticPups",
+   breederSlug: "emp-verified",
+   breederName: "EMP Verified",
+ },
+];
+
+const MOCK_APPLICATIONS: BreederApplication[] = [
+ {
+   id: "a1",
+   businessName: "Starfall Yorkies",
+   contactName: "Jamie",
+   email: "hello@starfallyorkies.com",
+   state: "TX",
+   status: "Pending",
+   submittedAt: "2026-02-19",
+ },
+ {
+   id: "a2",
+   businessName: "Tiny Royal Paws",
+   contactName: "Kelsey",
+   email: "contact@tinyroyalpaws.com",
+   state: "OK",
+   status: "Pending",
+   submittedAt: "2026-02-20",
  },
 ];
 
@@ -68,60 +90,41 @@ function money(n: number) {
  }).format(n);
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
- return <span className="pill">{children}</span>;
-}
-
-function Tag({
- tone,
- children,
-}: {
- tone: "aqua" | "pink" | "lilac" | "muted";
- children: React.ReactNode;
-}) {
- return <span className={`tag tag-${tone}`}>{children}</span>;
-}
-
 export default function App() {
- const [breed, setBreed] = useState("");
- const [color, setColor] = useState("");
- const [status, setStatus] = useState<"" | Puppy["status"]>("");
+ const [query, setQuery] = useState("");
+ const [statusFilter, setStatusFilter] = useState<PuppyStatus | "All">("All");
 
- const filtered = useMemo(() => {
+ const puppies = useMemo(() => {
+   const q = query.trim().toLowerCase();
+
    return MOCK_PUPPIES.filter((p) => {
-     const okBreed =
-       !breed.trim() || p.breed.toLowerCase().includes(breed.toLowerCase());
-     const okColor =
-       !color.trim() || p.color.toLowerCase().includes(color.toLowerCase());
-     const okStatus = !status || p.status === status;
-     return okBreed && okColor && okStatus;
+     const matchesQuery =
+       !q ||
+       p.name.toLowerCase().includes(q) ||
+       p.breed.toLowerCase().includes(q) ||
+       p.color.toLowerCase().includes(q) ||
+       p.breederName.toLowerCase().includes(q);
+
+     const matchesStatus = statusFilter === "All" ? true : p.status === statusFilter;
+
+     return matchesQuery && matchesStatus;
    });
- }, [breed, color, status]);
+ }, [query, statusFilter]);
 
  return (
-   <div className="app">
-     {/* Glow backdrop */}
-     <div className="glow glow-aqua" />
-     <div className="glow glow-pink" />
-     <div className="glow glow-lilac" />
-
-     {/* Top nav */}
-     <header className="topbar">
+   <div className="appShell">
+     <header className="topBar">
        <div className="brand">
-         <div className="brandMark" aria-hidden="true">
-           <span className="spark" />
-           <span className="spark" />
-           <span className="spark" />
-         </div>
+         <div className="brandMark">EMP</div>
          <div className="brandText">
            <div className="brandName">Exotic Misfit Pups</div>
-           <div className="brandSub">Rare • Ethical • Verified</div>
+           <div className="brandTag">Dark Theme Homepage (Vite + React + TS)</div>
          </div>
        </div>
 
-       <nav className="nav">
+       <nav className="topNav">
          <a className="navLink" href="#puppies">
-           Find Puppies
+           Puppies
          </a>
          <a className="navLink" href="#breeders">
            Breeders
@@ -130,316 +133,140 @@ export default function App() {
            Apply
          </a>
        </nav>
-
-       <div className="navCtas">
-         <button className="btn btnGhost" type="button">
-           Sign In
-         </button>
-         <button className="btn btnNeon" type="button">
-           Apply as Verified Breeder
-         </button>
-       </div>
      </header>
 
-     {/* Hero */}
-     <main className="container">
+     <main className="page">
        <section className="hero">
-         <div className="heroLeft">
-           <div className="kicker">
-             <Tag tone="aqua">EMP Verified</Tag>
-             <Tag tone="pink">Exotic Colors Welcome</Tag>
-             <Tag tone="lilac">Buyer-Safe Marketplace</Tag>
+         <h1 className="heroTitle">Find rare & exotic puppies — ethically.</h1>
+         <p className="heroText">
+           A marketplace built for breeders and families who love the “misfits” — merles, chocolates,
+           blues, and everything in between.
+         </p>
+
+         <div className="heroControls">
+           <div className="control">
+             <label className="label">Search</label>
+             <input
+               className="input"
+               value={query}
+               onChange={(e) => setQuery(e.target.value)}
+               placeholder="Search name, color, breeder…"
+             />
            </div>
 
-           <h1 className="headline">
-             The dark-luxe marketplace for{" "}
-             <span className="grad">rare &amp; exotic</span> pups.
-           </h1>
+           <div className="control">
+             <label className="label">Status</label>
+             <select
+               className="select"
+               value={statusFilter}
+               onChange={(e) => setStatusFilter(e.target.value as PuppyStatus | "All")}
 
-           <p className="subhead">
-             A GoodDog-style experience — but built for breeders &amp; buyers
-             who want exotic colors, high standards, and real transparency.
-           </p>
-
-           <div className="heroBtns">
-             <a className="btn btnPrimary" href="#puppies">
-               Browse Puppies
-             </a>
-             <a className="btn btnGlass" href="#apply">
-               Breeder Application
-             </a>
-           </div>
-
-           <div className="trustRow">
-             <Pill>Manual approval</Pill>
-             <Pill>Verified profiles</Pill>
-             <Pill>Search by breed/color</Pill>
-             <Pill>Puppy → Breeder profile flow</Pill>
+               <option value="All">All</option>
+               <option value="Available">Available</option>
+               <option value="Hold">Hold</option>
+               <option value="Sold">Sold</option>
+             </select>
            </div>
          </div>
+       </section>
 
-         <div className="heroRight">
-           <div className="panel">
-             <div className="panelTop">
-               <div>
-                 <div className="panelTitle">Quick Search</div>
-                 <div className="panelSub">
-                   Find pups fast (demo filters — real database comes next)
+       <section id="puppies" className="section">
+         <div className="sectionHeader">
+           <h2 className="sectionTitle">Available Puppies</h2>
+           <div className="sectionSub">{puppies.length} shown</div>
+         </div>
+
+         <div className="grid">
+           {puppies.map((p) => (
+             <article key={p.id} className="card">
+               <div className="cardTop">
+                 <div className="cardTitleRow">
+                   <div className="cardTitle">{p.name}</div>
+                   <span className={`status status-${p.status.toLowerCase()}`}>{p.status}</span>
+                 </div>
+                 <div className="cardSub">
+                   {p.breed} • {p.sex} • {p.color}
                  </div>
                </div>
-               <Tag tone="muted">Live Preview</Tag>
-             </div>
 
-             <div className="filters" id="puppies">
-               <label className="field">
-                 <span>Breed</span>
-                 <input
-                   value={breed}
-                   onChange={(e) => setBreed(e.target.value)}
-                   placeholder="Yorkie, Frenchie, etc."
-                 />
-               </label>
-               <label className="field">
-                 <span>Color</span>
-                 <input
-                   value={color}
-                   onChange={(e) => setColor(e.target.value)}
-                   placeholder="Merle, Parti, Chocolate..."
-                 />
-               </label>
-               <label className="field">
-                 <span>Status</span>
-                 <select
-                   value={status}
-                   onChange={(e) =>
-                     setStatus(e.target.value as "" | Puppy["status"])
-                   }
+               <div className="cardBottom">
+                 <div className="price">{money(p.price)}</div>
+                 <a className="link" href={`#breeder-${p.breederSlug}`}>
+                   View breeder →
+                 </a>
+               </div>
+             </article>
+           ))}
+         </div>
+       </section>
 
-                   <option value="">Any</option>
-                   <option value="Available">Available</option>
-                   <option value="Hold">Hold</option>
-                   <option value="Sold">Sold</option>
-                 </select>
-               </label>
-             </div>
+       <section id="breeders" className="section">
+         <div className="sectionHeader">
+           <h2 className="sectionTitle">Breeders</h2>
+           <div className="sectionSub">Profiles & verification coming next</div>
+         </div>
 
-             <div className="grid">
-               {filtered.map((p) => (
-                 <article key={p.id} className="card">
-                   <div className="cardTop">
-                     <div className="avatar" aria-hidden="true">
-                       {p.name.slice(0, 1)}
-                     </div>
-                     <div className="cardMeta">
-                       <div className="cardName">
-                         {p.name} <span className="dim">• {p.sex}</span>
-                       </div>
-                       <div className="cardSub">
-                         {p.breed} • <span className="emph">{p.color}</span>
-                       </div>
-                     </div>
+         <div className="miniPanels">
+           <div className="miniPanel" id="breeder-exoticpups">
+             <div className="miniTitle">ExoticPups</div>
+             <div className="miniText">Micro Yorkies • rare colors • ethical placement</div>
+           </div>
 
-                     <span
-                       className={`status ${
-                         p.status === "Available"
-                           ? "status-available"
-                           : p.status === "Hold"
-                           ? "status-hold"
-                           : "status-sold"
-                       }`}
+           <div className="miniPanel" id="breeder-jeanies-minis">
+             <div className="miniTitle">Jeanie’s Minis</div>
+             <div className="miniText">Tiny companions • education-first puppy packs</div>
+           </div>
 
-                       {p.status}
-                     </span>
-                   </div>
+           <div className="miniPanel" id="breeder-emp-verified">
+             <div className="miniTitle">EMP Verified</div>
+             <div className="miniText">Verified badge system (coming soon)</div>
+           </div>
+         </div>
+       </section>
 
-                   <div className="cardBottom">
-                     <div className="price">{money(p.price)}</div>
-                     <a className="link" href="#breeders">
-                       View breeder →
-                     </a>
-                   </div>
-                 </article>
+       <section id="apply" className="section">
+         <div className="sectionHeader">
+           <h2 className="sectionTitle">Breeder Applications</h2>
+           <div className="sectionSub">Applications are reviewed before profiles go live.</div>
+         </div>
+
+         <div className="tableWrap">
+           <table className="table">
+             <thead>
+               <tr>
+                 <th>Business</th>
+                 <th>Contact</th>
+                 <th>Email</th>
+                 <th>State</th>
+                 <th>Status</th>
+                 <th>Submitted</th>
+               </tr>
+             </thead>
+             <tbody>
+               {MOCK_APPLICATIONS.map((a) => (
+                 <tr key={a.id}>
+                   <td>{a.businessName}</td>
+                   <td>{a.contactName}</td>
+                   <td>{a.email}</td>
+                   <td>{a.state}</td>
+                   <td>{a.status}</td>
+                   <td>{a.submittedAt}</td>
+                 </tr>
                ))}
-             </div>
-           </div>
+             </tbody>
+           </table>
+         </div>
 
-           <div className="miniPanels">
-             <div className="mini">
-               <div className="miniTitle">Breeder Approval</div>
-               <div className="miniText">
-                 Applications are reviewed before profiles go live.
-               </div>
-             </div>
-             <div className="mini">
-               <div className="miniTitle">EMP Profile Pages</div>
-               <div className="miniText">
-                 Each pup links directly to the breeder’s verified profile.
-               </div>
-             </div>
-           </div>
+         <div className="note">
+           Next step: we can add a real application form + connect to a database (Supabase / Firebase)
+           when you’re ready.
          </div>
        </section>
-
-       {/* Breeder section */}
-       <section className="section" id="breeders">
-         <div className="sectionHead">
-           <h2>Breeders (Verified + Exotic-friendly)</h2>
-           <p>
-             Buyers see trust indicators first — then pups. This keeps the vibe
-             premium and the marketplace safer.
-           </p>
-         </div>
-
-         <div className="breederGrid">
-           <div className="breederCard">
-             <div className="breederTop">
-               <div className="breederBadge">EMP VERIFIED</div>
-               <div className="breederName">ExoticPups</div>
-               <div className="breederSub">
-                 Micro Yorkies • Exotic colors • Transparent standards
-               </div>
-             </div>
-             <div className="breederStats">
-               <Pill>4 pups listed</Pill>
-               <Pill>TX region</Pill>
-               <Pill>Health-first</Pill>
-             </div>
-             <div className="breederActions">
-               <button className="btn btnGlass" type="button">
-                 View Profile
-               </button>
-               <button className="btn btnPrimary" type="button">
-                 View Puppies
-               </button>
-             </div>
-           </div>
-
-           <div className="breederCard">
-             <div className="breederTop">
-               <div className="breederBadge ghost">PENDING VERIFICATION</div>
-               <div className="breederName dim">Coming Soon</div>
-               <div className="breederSub">
-                 This slot will populate as new breeders are approved.
-               </div>
-             </div>
-             <div className="breederStats">
-               <Pill>Manual review</Pill>
-               <Pill>Profile required</Pill>
-               <Pill>Badge shown</Pill>
-             </div>
-             <div className="breederActions">
-               <a className="btn btnNeon" href="#apply">
-                 Apply Now
-               </a>
-             </div>
-           </div>
-         </div>
-       </section>
-
-       {/* Apply section */}
-       <section className="section" id="apply">
-         <div className="sectionHead">
-           <h2>Apply to become an EMP Verified Breeder</h2>
-           <p>
-             This is the start of your approval flow. Next we’ll wire it to a
-             database + admin approve/reject.
-           </p>
-         </div>
-
-         <div className="apply">
-           <form
-             className="applyForm"
-             onSubmit={(e) => {
-               e.preventDefault();
-               alert(
-                 "Demo submit ✅ Next step: connect to database + approval dashboard."
-               );
-             }}
-
-             <div className="row">
-               <label className="field">
-                 <span>Breeder/Program Name</span>
-                 <input placeholder="ExoticPups, Jeanie’s Minis, etc." required />
-               </label>
-               <label className="field">
-                 <span>Email</span>
-                 <input type="email" placeholder="you@email.com" required />
-               </label>
-             </div>
-
-             <div className="row">
-               <label className="field">
-                 <span>Location (State)</span>
-                 <input placeholder="TX" required />
-               </label>
-               <label className="field">
-                 <span>Main Breed(s)</span>
-                 <input placeholder="Yorkies, Frenchies..." required />
-               </label>
-             </div>
-
-             <label className="field">
-               <span>Tell buyers about your standards</span>
-               <textarea
-                 placeholder="Health testing, vet care, contracts, socialization, etc."
-                 rows={4}
-                 required
-               />
-             </label>
-
-             <div className="applyActions">
-               <button className="btn btnPrimary" type="submit">
-                 Submit Application
-               </button>
-               <span className="dim small">
-                 You control approvals. Nothing goes live without review.
-               </span>
-             </div>
-           </form>
-
-           <div className="applySide">
-             <div className="sideCard">
-               <div className="sideTitle">What happens next?</div>
-               <ol className="steps">
-                 <li>Breeder submits application</li>
-                 <li>You approve or reject in Admin</li>
-                 <li>Approved breeders build profiles</li>
-                 <li>Breeders list puppies</li>
-                 <li>Buyers search → puppy → breeder profile</li>
-               </ol>
-             </div>
-             <div className="sideCard glowBorder">
-               <div className="sideTitle">EMP Look & Feel</div>
-               <p className="dim">
-                 Dark-luxe, neon accents, premium trust signals. This is your
-                 new theme — nothing like the last site.
-               </p>
-             </div>
-           </div>
-         </div>
-       </section>
-
-       <footer className="footer">
-         <div className="footerLeft">
-           <div className="brandName">Exotic Misfit Pups</div>
-           <div className="dim small">
-             © {new Date().getFullYear()} • Built for rare colors + ethical
-             standards
-           </div>
-         </div>
-         <div className="footerRight">
-           <a className="footerLink" href="#apply">
-             Breeder Apply
-           </a>
-           <a className="footerLink" href="#puppies">
-             Puppies
-           </a>
-           <a className="footerLink" href="#breeders">
-             Breeders
-           </a>
-         </div>
-       </footer>
      </main>
+
+     <footer className="footer">
+       <div>© {new Date().getFullYear()} Exotic Misfit Pups</div>
+     </footer>
    </div>
  );
 }
